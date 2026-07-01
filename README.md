@@ -1,193 +1,319 @@
-# Multi-Source Candidate Data Transformer
+# 🚀 Multi-Source Candidate Data Transformer
 
-An ETL pipeline that ingests candidate data from several differently-shaped
-sources (ATS JSON export, recruiter CSV export, resume PDF, recruiter
-notes .txt) and produces one deduplicated, schema-valid, confidence-scored
-canonical JSON profile per candidate.
+A **Python-based ETL pipeline** that ingests candidate data from multiple structured and unstructured sources, normalizes the data, merges duplicate records, resolves conflicts, validates the output, and generates configurable canonical JSON profiles.
 
-Built for the Eightfold "Multi-Source Candidate Data Transformer" take-home
-assignment. See `DESIGN.pdf` for the full one-page technical design.
+> **Built for the Eightfold Engineering Intern Assignment.**  
+> See **`DESIGN.pdf`** for the complete technical design.
 
-## Project description
+---
 
-Eightfold ingests candidate data from many places at once, and every source
-has its own field names, its own missing/garbage values, and sometimes
-disagrees with the others about the same fact. This project turns that mess
-into one clean, normalized, provenance-tracked profile per person, with a
-runtime-configurable output shape so downstream consumers can rename/select
-fields without touching code.
+# 📌 Project Overview
 
-Pipeline stages (one module each, `src/`):
+Candidate information often comes from multiple sources such as:
+
+- ATS JSON Export
+- Recruiter CSV Export
+- Resume PDF
+- Recruiter Notes
+
+Each source may have:
+
+- Different field names
+- Missing values
+- Duplicate information
+- Conflicting data
+
+This project transforms all these sources into a **single normalized candidate profile** with:
+
+- ✅ Deduplication
+- ✅ Data Normalization
+- ✅ Conflict Resolution
+- ✅ Provenance Tracking
+- ✅ Confidence Scoring
+- ✅ Runtime Configurable Output
+
+---
+
+# 🏗️ Pipeline Architecture
 
 | Stage | Module | Responsibility |
-|---|---|---|
-| 1. Extract | `extractor.py` | Read raw bytes/text from each file type |
-| 2. Parse | `parser.py` | Resolve each source's own field names into a common shape |
-| 3. Normalize | `normalizer.py` | Clean emails, phones (E.164), countries (ISO-3166), dates, skills |
-| 4. Merge | `merger.py` | Group records into one candidate per real person |
-| 5. Resolve conflicts | `merger.py` | Pick winning values via configurable source priority, with provenance |
-| 6. Validate | `validator.py` | Guarantee schema-valid output; missing -> `null`, never a crash |
-| 7. Project | `config_loader.py` | Reshape the result per the runtime `config.json` |
+|--------|---------|----------------|
+| 1️⃣ Extract | `extractor.py` | Read raw data from JSON, CSV, TXT and PDF |
+| 2️⃣ Parse | `parser.py` | Convert source-specific fields into a common structure |
+| 3️⃣ Normalize | `normalizer.py` | Normalize emails, phones, countries, skills and dates |
+| 4️⃣ Merge | `merger.py` | Merge duplicate candidate records |
+| 5️⃣ Resolve | `merger.py` | Resolve conflicting values using source priority |
+| 6️⃣ Validate | `validator.py` | Ensure schema-valid output |
+| 7️⃣ Project | `config_loader.py` | Generate configurable output using runtime config |
 
-## Installation
+---
+
+# 📂 Project Structure
+
+```text
+candidate-transformer/
+│
+├── config/
+│   ├── config.json
+│   └── config_custom.json
+│
+├── input/
+│   ├── candidate_ats.json
+│   ├── recruiter_export.csv
+│   ├── recruiter_notes.txt
+│   └── resume.pdf
+│
+├── output/
+│   ├── output.json
+│   ├── output_custom.json
+│   └── .gitkeep
+│
+├── src/
+│   ├── extractor.py
+│   ├── parser.py
+│   ├── normalizer.py
+│   ├── merger.py
+│   ├── validator.py
+│   ├── config_loader.py
+│   └── main.py
+│
+├── tests/
+│   └── test_pipeline.py
+│
+├── README.md
+├── DESIGN.pdf
+├── requirements.txt
+└── main.py
+```
+
+---
+
+# ⚙️ Installation
+
+Clone the repository
 
 ```bash
-git clone <this-repo>
+git clone <repository-url>
 cd candidate-transformer
-python3 -m venv venv && source venv/bin/activate   # optional but recommended
+```
+
+Create Virtual Environment
+
+```bash
+python -m venv venv
+```
+
+Activate
+
+### Windows
+
+```bash
+venv\Scripts\activate
+```
+
+### Linux / macOS
+
+```bash
+source venv/bin/activate
+```
+
+Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-## How to run
+---
+
+# ▶️ Running the Project
+
+Generate canonical output
 
 ```bash
-python main.py input output/output.json --config config/config.json
+python main.py input output/output.json
 ```
 
-Arguments:
-- `input_folder` — folder containing source files (any mix of `.json`, `.csv`, `.pdf`, `.txt`)
-- `output.json` — where the canonical JSON array gets written
-- `--config` (optional) — path to a runtime projection config; omit to use the built-in default schema
-- `--source-priority` (optional) — comma-separated source-type priority for conflict resolution, e.g. `resume_pdf,ats_json,recruiter_csv,recruiter_notes` (this is the default)
-- `--quiet` — suppress the step-by-step log lines
-
-A second, pre-built example config (`config/config_custom.json`) demonstrates
-renaming (`full_name` → `name`), nesting (`emails`/`phones` → `contact.*`),
-dropping fields (no `experience`/`education`), and omit-on-missing behavior:
+Generate custom output
 
 ```bash
 python main.py input output/output_custom.json --config config/config_custom.json
 ```
 
-### Run the tests
+Run all tests
 
 ```bash
 pytest -q
 ```
 
-## Sample input
+---
 
-`input/` contains 4 sample source files spanning both required groups:
+# 📥 Sample Input
 
-- `candidate_ats.json` — **structured**, ATS export (3 records, including one
-  deliberately empty/garbage record to exercise the "must not crash" path)
-- `recruiter_export.csv` — **structured**, recruiter export with its own
-  column names (`Full Name`, `current_company`, ...)
-- `resume.pdf` — **unstructured**, a generated one-page resume for "John A. Doe"
-- `recruiter_notes.txt` — **unstructured**, free-text recruiter notes for "Priya Sharma"
+The **input/** folder contains:
 
-These are wired together on purpose: "John Doe" (ATS) / "John A. Doe" (CSV,
-resume) is the same person across 3 sources with a name spelling difference
-and a real conflict (ATS says `IBM`, CSV says `Infosys`, the resume — the
-highest-priority source — also says `IBM`, so `IBM` wins).
+| File | Type |
+|------|------|
+| candidate_ats.json | Structured |
+| recruiter_export.csv | Structured |
+| recruiter_notes.txt | Unstructured |
+| resume.pdf | Unstructured |
 
-## Sample output
+These files intentionally contain overlapping candidate information to demonstrate data merging and conflict resolution.
+
+---
+
+# 📤 Sample Output
+
+Each generated candidate profile contains:
+
+- Candidate ID
+- Full Name
+- Contact Information
+- Skills
+- Experience
+- Education
+- Provenance
+- Overall Confidence Score
+
+Example:
 
 ```json
 {
   "candidate_id": "cand_0001",
   "full_name": "John A. Doe",
-  "emails": ["john@gmail.com"],
-  "phones": ["+919876543210"],
-  "location": { "city": "Bengaluru", "region": null, "country": "IN" },
-  "links": { "linkedin": "linkedin.com/in/johnadoe", "github": "github.com/johnadoe", "portfolio": null, "other": [] },
+  "emails": [
+    "john@gmail.com"
+  ],
+  "phones": [
+    "+919876543210"
+  ],
   "headline": "Senior Backend Engineer",
-  "years_experience": 5.0,
-  "skills": [
-    { "name": "Python", "confidence": 0.99, "sources": ["ats_json", "recruiter_csv", "resume_pdf"] }
-  ],
-  "experience": [
-    { "company": "IBM", "title": "Senior Software Engineer", "start": null, "end": null, "summary": null }
-  ],
-  "education": [],
-  "provenance": [
-    { "field": "headline", "source": "resume_pdf", "method": "source_priority" }
-  ],
   "overall_confidence": 0.83
 }
 ```
 
-Full output: `output/output.json`. The 4th record in that file is the
-deliberately empty ATS row — it produces a schema-valid record full of
-`null`s rather than crashing the run.
+---
 
-## Design decisions
+# ⚡ Runtime Configuration
 
-**Identity / merge rule.** Two records are the same candidate if they share
-a normalized email (high confidence), or — absent any email overlap — if
-their normalized full names fuzzy-match above a threshold (88, via
-`rapidfuzz.token_sort_ratio`). Records with conflicting emails are never
-merged on name alone, even if the names match exactly, since email is the
-stronger identity signal.
+The project supports **runtime configurable output**.
 
-**Conflict resolution rule.** Scalar fields are resolved by a configurable
-source-priority order, default `resume_pdf > ats_json > recruiter_csv >
-recruiter_notes` — the reasoning being that a candidate's own resume is
-closest to ground truth, the ATS record is usually filled in carefully at
-intake, a recruiter's CSV export can be stale, and free-text notes are the
-least structured/reliable. Every resolution is recorded in `provenance` so
-the decision is auditable. List fields (`emails`, `phones`, `skills`) are
-**unioned**, not conflict-resolved — more contact info or more corroborated
-skills is strictly more useful, never wrong, and a skill seen in multiple
-sources gets a small confidence boost.
-
-**Runtime config (no code changes).** `config_loader.py` applies a small
-projection DSL on top of the internal canonical record: each output field
-declares its target `path` and the internal `from` path (dot + `[]` list
-syntax), with `required`/`on_missing` controlling null vs. omit vs. error
-behavior. The pipeline's internal engine never changes — only the final
-reshape does — which keeps extraction/merge logic stable while still
-satisfying "changing the config should change the output without changing
-code."
-
-**Robustness.** Every extraction step is wrapped so that one bad/garbage/
-unsupported file degrades the run instead of crashing it: unknown
-extensions are skipped with a warning, unparseable PDFs yield empty text,
-malformed JSON/CSV rows are logged and skipped, and any value that doesn't
-fit the schema's expected type is coerced to `null` in `validator.py`
-rather than raised. A top-level `try/except` in `main.py` further guarantees
-the CLI always writes a (possibly empty) schema-valid JSON file rather than
-exiting with an unhandled traceback.
-
-**Assumptions.**
-- Default phone region for E.164 parsing is `IN` (configurable via
-  `--source-priority`'s sibling flag would be a natural extension; today it's
-  a constant in `normalizer.py`) since the sample sources are India-based.
-- Free-text resume/notes parsing uses lightweight regex heuristics
-  (`Name:`, `Skills:`, email/phone/LinkedIn/GitHub patterns, an "N years
-  experience" phrase) rather than an LLM or full NLP pipeline, to keep the
-  solution dependency-light and deterministic for grading; documented as a
-  "lower priority" trade-off per the assignment brief.
-- `years_experience` and dates favor the highest-priority source on
-  conflict rather than always taking "the largest number," since a stale
-  source might overstate it.
-
-## Edge cases covered
-
-1. **Same person, different name spelling** across 3 sources, merged via
-   shared email (`John Doe` / `John A. Doe`).
-2. **Conflicting field values** (`company = IBM` vs `Infosys`) resolved by
-   source-priority rule, with the decision recorded in `provenance`.
-3. **Completely empty/garbage structured record** (blank ATS row) — produces
-   a schema-valid all-`null` candidate instead of crashing.
-4. **Unsupported file extension** in the input folder — skipped with a
-   warning, run continues.
-5. **Malformed JSON file** — caught, logged, skipped, run continues.
-6. **Empty input folder** — produces a valid empty `[]` output.
-
-## Folder structure
+Simply change
 
 ```
-candidate-transformer/
-├── input/                  sample source files
-├── output/                 generated output JSON
-├── config/                 runtime projection configs
-├── src/                    pipeline modules
-├── tests/                  pytest suite
-├── DESIGN.pdf              one-page technical design (Step 1 deliverable)
-├── main.py                 CLI entrypoint (thin wrapper over src/main.py)
-├── requirements.txt
-└── README.md
+config/config.json
 ```
-#   C a n d i d a t e - D a t a - T r a n s f o r m e r  
- 
+
+or
+
+```
+config/config_custom.json
+```
+
+without modifying any source code.
+
+Features include:
+
+- Rename fields
+- Remove fields
+- Nested objects
+- Missing field handling
+- Custom output schema
+
+---
+
+# 🔀 Merge Strategy
+
+Candidate records are merged using:
+
+- Email Match (Primary)
+- Fuzzy Name Match (Secondary)
+
+Conflict Resolution Priority
+
+```
+Resume PDF
+        ↓
+ATS JSON
+        ↓
+Recruiter CSV
+        ↓
+Recruiter Notes
+```
+
+The selected source is recorded in the **Provenance** field.
+
+---
+
+# 🛡️ Robustness
+
+The pipeline safely handles:
+
+- Unsupported file formats
+- Malformed JSON
+- Corrupted PDFs
+- Missing values
+- Invalid data types
+- Empty input folders
+
+Instead of crashing, invalid values are replaced with **null**.
+
+---
+
+# 🧪 Testing
+
+Automated tests validate:
+
+- Email Normalization
+- Phone Normalization
+- Country Normalization
+- Candidate Merging
+- Conflict Resolution
+- Runtime Configuration
+- End-to-End Pipeline Execution
+
+Run
+
+```bash
+pytest -q
+```
+
+---
+
+# 📄 Documentation
+
+This repository includes:
+
+- 📘 README.md
+- 📑 DESIGN.pdf
+- 🧪 Automated Test Suite
+- ⚙️ Runtime Configurations
+- 📥 Sample Input Files
+- 📤 Sample Output Files
+
+---
+
+# 👨‍💻 Technologies Used
+
+- Python 3
+- pdfplumber
+- RapidFuzz
+- phonenumbers
+- pycountry
+- pytest
+
+---
+
+# 📜 License
+
+This project was developed as part of the **Eightfold Engineering Intern Assignment** and is intended for educational and evaluation purposes.
+
+---
+
+## ⭐ Author
+
+**Padarbinda Swain**
+
+B.Tech CSE (Cyber Security)
+
+SOA University
