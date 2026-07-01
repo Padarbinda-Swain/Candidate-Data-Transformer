@@ -1,0 +1,14 @@
+{
+  "_comment": "Example custom config: renames fields, drops experience/education, and omits (rather than nulls) any missing optional field. Run with: python main.py input output_min.json --config config/config_custom.json",
+  "fields": [
+    { "path": "id", "from": "candidate_id", "type": "string", "required": true },
+    { "path": "name", "from": "full_name", "type": "string", "required": true },
+    { "path": "contact.emails", "from": "emails", "type": "string[]", "required": false },
+    { "path": "contact.phones", "from": "phones", "type": "string[]", "required": false },
+    { "path": "title", "from": "headline", "type": "string", "required": false },
+    { "path": "top_skills", "from": "skills", "type": "array", "required": false },
+    { "path": "confidence", "from": "overall_confidence", "type": "number", "required": false }
+  ],
+  "include_confidence": true,
+  "on_missing": "omit"
+}

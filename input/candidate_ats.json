@@ -1,0 +1,35 @@
+[
+  {
+    "name": "John Doe",
+    "email": "John@Gmail.com",
+    "phone": "+91-9876543210",
+    "city": "Bengaluru",
+    "country": "India",
+    "company": "IBM",
+    "title": "Senior Software Engineer",
+    "skills": ["python", "django", "aws"],
+    "years_experience": 6
+  },
+  {
+    "name": "Priya Sharma",
+    "email": "priya.sharma@example.com",
+    "phone": "9123456789",
+    "city": "Pune",
+    "country": "IN",
+    "company": "TCS",
+    "title": "Data Analyst",
+    "skills": ["sql", "python"],
+    "years_experience": 3
+  },
+  {
+    "name": "",
+    "email": "",
+    "phone": null,
+    "city": null,
+    "country": null,
+    "company": null,
+    "title": null,
+    "skills": [],
+    "years_experience": null
+  }
+]
